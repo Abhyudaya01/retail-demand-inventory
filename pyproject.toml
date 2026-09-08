@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools==75.6.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retail-demand"
+version = "0.1.0"
+description = "Synthetic retail demand, forecasting, and inventory optimization project."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas==2.2.3",
+  "numpy==2.1.3",
+  "pyarrow==18.1.0",
+  "holidays==0.61",
+  "boto3==1.35.76",
+  "s3fs==2024.10.0",
+  "pydantic==2.10.2",
+  "pydantic-settings==2.6.1",
+  "python-dotenv==1.0.1",
+  "typer==0.15.1",
+  "structlog==24.4.0",
+  "pytest==8.3.4",
+  "ruff==0.8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "moto[s3]==5.0.22",
+]
+
+[project.scripts]
+retail-demand-generate = "retail_demand.data_generation.generator:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["notebooks/*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

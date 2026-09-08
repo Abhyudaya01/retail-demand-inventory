@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local environment
+.env
+.DS_Store
+
+# Generated data
+data/*
+!data/.gitkeep
+
+# Databricks
+.databricks/
+databricks.yml
+*.dbc
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Build artifacts
+build/
+dist/
