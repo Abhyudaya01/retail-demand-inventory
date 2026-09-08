@@ -31,3 +31,4 @@ derby.log
 # Build artifacts
 build/
 dist/
+00_sync_s3_to_volume.py
