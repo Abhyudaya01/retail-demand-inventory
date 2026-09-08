@@ -2,69 +2,50 @@
 #
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  !!!  WARNING  !!!                                                          ║
-# ║                                                                              ║
 # ║  DELETE THE CREDENTIALS CELL BEFORE SAVING THIS NOTEBOOK.                  ║
 # ║  NEVER COMMIT ACCESS KEYS TO VERSION CONTROL OR DATABRICKS REPOS.           ║
-# ║                                                                              ║
-# ║  Best practice: use Databricks Secrets (dbutils.secrets.get) or             ║
-# ║  a cluster environment variable instead of inline credentials.              ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 #
-# PURPOSE
-# -------
-# Copies every parquet object from the raw S3 landing zone into a Databricks
-# Unity Catalog Volume so downstream Bronze ingestion can read from the Volume
-# using standard Spark file paths rather than s3a:// URIs.
+# PURPOSE: copies parquet files from S3 raw/ into a Databricks Volume so Spark
+# can read them without needing fs.s3a.access.key (which Free Edition blocks).
 #
-# Databricks Free Edition serverless compute does not allow setting
-# fs.s3a.access.key at runtime, so we download S3 objects through boto3/Python
-# instead of mounting S3 with Spark.
-#
-# INSTRUCTIONS
-# ------------
-# 1. Upload this file to your Databricks workspace as a Python notebook.
-# 2. Fill in the PLACEHOLDERS below with your AWS credentials.
-# 3. Run all cells.  The summary table at the bottom confirms success.
-# 4. *** DELETE THIS ENTIRE FILE OR REMOVE THE CREDENTIAL CELL BEFORE SAVING. ***
-#
-# HOW TO UPLOAD
-# -------------
-#   Databricks UI → Workspace → Import → select this .py file → as Notebook
-#   Source language: Python
+# INSTRUCTIONS:
+# 1. Upload this file to Databricks as a Python notebook.
+# 2. Fill in the AWS placeholders in Cell 2.
+# 3. Run all cells.
+# 4. *** DELETE CELL 2 BEFORE SAVING. ***
 
-# ── Cell 1: install package if running in a fresh cluster ──────────────────────
-# Uncomment the line below if retail_demand is not already installed on the cluster.
-# %pip install git+https://github.com/<your-org>/retail-demand-inventory.git
+# ── Cell 1: install package from GitHub ────────────────────────────────────────
+%pip install git+https://github.com/Abhyudaya01/retail-demand-inventory.git
+dbutils.library.restartPython()
 
 # ── Cell 2: AWS credentials ── DELETE THIS CELL BEFORE SAVING ─────────────────
 import os
-
-# TODO: replace the placeholder values with your real credentials before running.
-# TODO: DELETE THIS CELL (or replace with dbutils.secrets calls) before saving.
-os.environ["AWS_ACCESS_KEY_ID"] = "REPLACE_WITH_YOUR_ACCESS_KEY_ID"        # ← PLACEHOLDER
-os.environ["AWS_SECRET_ACCESS_KEY"] = "REPLACE_WITH_YOUR_SECRET_ACCESS_KEY"  # ← PLACEHOLDER
+os.environ["AWS_ACCESS_KEY_ID"] = "REPLACE_WITH_YOUR_ACCESS_KEY_ID"
+os.environ["AWS_SECRET_ACCESS_KEY"] = "REPLACE_WITH_YOUR_SECRET_ACCESS_KEY"
 os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+
+# ── Cell 3: configuration ──────────────────────────────────────────────────────
+S3_BUCKET = "abhi-retail-demand-2026"
+S3_RAW_PREFIX = "raw"
+VOLUME_ROOT = "/Volumes/workspace/retail_demand/raw"
+TABLES = ["stores", "products", "calendar", "prices", "sales"]
+
+# ── Cell 4: sync ──────────────────────────────────────────────────────────────
+# Reads AWS creds from os.environ (set in Cell 2). If Cell 2 was deleted,
+# this cell fails loudly with KeyError — the desired safety behavior.
+import os
+from retail_demand.io.databricks_sync import sync_s3_to_volume
 
 AWS_ACCESS_KEY = os.environ["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
-# ── Cell 3: configuration ──────────────────────────────────────────────────────
-# Adjust S3_BUCKET and VOLUME_ROOT to match your environment.
-S3_BUCKET = "abhi-retail-demand-2026"       # your S3 bucket
-S3_RAW_PREFIX = "raw"                        # prefix written by the generator
-VOLUME_ROOT = "/Volumes/workspace/retail_demand/raw"  # Databricks Volume path
-
-TABLES = ["stores", "products", "calendar", "prices", "sales"]
-
-# ── Cell 4: sync ──────────────────────────────────────────────────────────────
-from retail_demand.io.databricks_sync import sync_s3_to_volume  # noqa: E402
-
 results = {}
 for table in TABLES:
     s3_uri = f"s3://{S3_BUCKET}/{S3_RAW_PREFIX}/{table}/"
     dest = f"{VOLUME_ROOT}/{table}"
-    print(f"Syncing {s3_uri} → {dest} ...")
+    print(f"Syncing {s3_uri} -> {dest} ...")
     stats = sync_s3_to_volume(
         s3_uri=s3_uri,
         volume_path=dest,
@@ -74,24 +55,16 @@ for table in TABLES:
     )
     results[table] = stats
     print(
-        f"  ✓ {table}: synced={stats['files_synced']}  skipped={stats['files_skipped']}"
-        f"  bytes={stats['bytes_transferred']:,}  time={stats['duration_seconds']}s"
+        f"  OK {table}: synced={stats['files_synced']} skipped={stats['files_skipped']}"
+        f" bytes={stats['bytes_transferred']:,}"
     )
 
-# ── Cell 5: summary table ─────────────────────────────────────────────────────
-print("\n{'Table':<12} {'Synced':>8} {'Skipped':>8} {'MB':>10} {'Secs':>8}")
-print("-" * 52)
+# ── Cell 5: summary ────────────────────────────────────────────────────────────
+print(f"\n{'Table':<12} {'Synced':>8} {'Skipped':>8} {'MB':>10}")
+print("-" * 44)
 for table, s in results.items():
     mb = s["bytes_transferred"] / (1024 * 1024)
-    print(
-        f"{table:<12} {s['files_synced']:>8} {s['files_skipped']:>8}"
-        f" {mb:>10.2f} {s['duration_seconds']:>8.1f}"
-    )
+    print(f"{table:<12} {s['files_synced']:>8} {s['files_skipped']:>8} {mb:>10.2f}")
 
-total_synced = sum(s["files_synced"] for s in results.values())
-total_bytes = sum(s["bytes_transferred"] for s in results.values())
-print(f"\nTotal files synced: {total_synced}, total bytes: {total_bytes:,}")
-
-# ── Cell 6: verify Volume contents ────────────────────────────────────────────
-# Uncomment to run a quick sanity check in Databricks:
-# display(dbutils.fs.ls(VOLUME_ROOT))
+# ── Cell 6: verify Volume contents ─────────────────────────────────────────────
+display(dbutils.fs.ls(VOLUME_ROOT))
