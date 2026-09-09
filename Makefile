@@ -33,7 +33,7 @@ generate-data-s3-small:
 verify-s3:
 	$(PYTHON) -m retail_demand.io.s3_writer verify
 
-.PHONY: bronze-local silver-local gold-local baselines-local
+.PHONY: bronze-local silver-local gold-local baselines-local gbm-local
 bronze-local:
 	$(PYTHON) -m retail_demand.bronze.cli
 
@@ -47,3 +47,13 @@ baselines-local:
 	MLFLOW_TRACKING_URI=file:///tmp/retail-demand-mlruns $(PYTHON) -m retail_demand.experiments.run_baselines \
 		--gold-root data/gold \
 		--experiment-path retail-demand-baselines-local
+
+
+gbm-local:
+	MLFLOW_TRACKING_URI=file:///tmp/retail-demand-mlruns $(PYTHON) -m retail_demand.experiments.run_gbm \
+		--gold-root data/gold \
+		--experiment-path retail-demand-gbm-local \
+		--cv-folds 1 \
+		--horizon-days 14 \
+		--min-train-days 180 \
+		--sample-rows 5000

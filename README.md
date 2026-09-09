@@ -43,6 +43,16 @@ under `data/gold` locally or `/Volumes/workspace/retail_demand/gold` on Databric
 include lagged demand, rolling demand windows, price and promo context, calendar encodings,
 and prior-year seasonal anchors. See [Gold feature dictionary](docs/gold_layer.md).
 
+### Model Performance
+
+Phase 7 trains LightGBM and XGBoost against the Phase 6 moving-average WAPE bar of 0.650. Final Databricks comparison values can be pasted here after the GBM notebook run.
+
+| Model | MAE | RMSE | WAPE | SMAPE | Bias | Delta WAPE vs baseline |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| moving_average | TBD | TBD | 0.650 | TBD | TBD | 0.0% |
+| lightgbm | TBD | TBD | TBD | TBD | TBD | TBD |
+| xgboost | TBD | TBD | TBD | TBD | TBD | TBD |
+
 ### Baseline Results
 
 Phase 6 compares three simple baselines using walk-forward validation and MLflow tracking.
@@ -99,7 +109,7 @@ storage plus small one-time PUT request costs.
 - [x] Phase 4: Silver cleaning, conformance, and validation
 - [x] Phase 5: Gold demand and inventory feature tables
 - [x] Phase 6: Baseline forecasting and MLflow tracking
-- [ ] Phase 7: LightGBM tracking and model evaluation
+- [x] Phase 7: LightGBM/XGBoost tracking and model evaluation
 - [ ] Phase 9: Reorder-point and safety-stock decision logic
 - [ ] Phase 10: Power BI semantic model and dashboard
 - [ ] Phase 11: Portfolio polish, documentation, and deployment notes

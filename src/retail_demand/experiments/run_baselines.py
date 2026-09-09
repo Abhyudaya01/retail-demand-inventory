@@ -24,13 +24,8 @@ DEFAULT_EXPERIMENT_PATH = "/Users/alohani@umd.edu/retail-demand-forecasting"
 
 
 def _spark_to_pandas(df: DataFrame) -> pd.DataFrame:
-    """Collect a Spark DataFrame as pandas, falling back to Arrow on distutils failures."""
-    try:
-        return df.toPandas()
-    except ModuleNotFoundError as exc:
-        if exc.name != "distutils":
-            raise
-        return df.toArrow().to_pandas()
+    """Collect a Spark DataFrame as pandas through Arrow."""
+    return df.toArrow().to_pandas()
 
 
 def _timestamp_to_ns(value: pd.Timestamp) -> int:

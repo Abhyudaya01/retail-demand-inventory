@@ -104,7 +104,7 @@ def per_segment_metrics(preds_df: Any, segment_cols: list[str]) -> pd.DataFrame:
 
     frame = pd.DataFrame(preds_df)
     rows = []
-    for keys, group in frame.groupby(segment_cols, dropna=False):
+    for keys, group in frame.groupby(segment_cols, dropna=False, observed=True):
         key_values = keys if isinstance(keys, tuple) else (keys,)
         row = dict(zip(segment_cols, key_values, strict=True))
         row.update(metric_dict(group["y_true"].to_numpy(), group["y_pred"].to_numpy()))

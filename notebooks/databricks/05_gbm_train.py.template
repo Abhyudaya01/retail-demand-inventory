@@ -1,0 +1,113 @@
+# Databricks notebook source
+# Databricks notebook - 05_gbm_train
+#
+# **************************************************************************
+# *  WARNING                                                               *
+# *  PHASE 7 FITS GBM MODELS WITH STRICT WALK-FORWARD VALIDATION.          *
+# *  GOLD IS READ BY PATH; NO CATALOG TABLES ARE REQUIRED.                 *
+# *  DO NOT CHANGE THE INSTALL PATTERN ON FREE EDITION SERVERLESS.         *
+# **************************************************************************
+# Review docs/model_selection.md and docs/leakage_prevention.md before running.
+
+# COMMAND ----------
+# MAGIC %pip install --no-deps --force-reinstall git+https://github.com/Abhyudaya01/retail-demand-inventory.git
+# MAGIC %pip install boto3 s3fs holidays "pydantic>=2" pydantic-settings typer structlog python-dotenv
+
+# COMMAND ----------
+dbutils.library.restartPython()
+
+# COMMAND ----------
+GOLD_ROOT = "/Volumes/workspace/retail_demand/gold"
+EXPERIMENT_PATH = "/Users/alohani@umd.edu/retail-demand-forecasting"
+CV_FOLDS = 3
+HORIZON = 14
+MIN_TRAIN = 180
+SAMPLE_ROWS = None
+
+# COMMAND ----------
+from retail_demand.mlflow_setup import configure_mlflow
+
+experiment_id = configure_mlflow(EXPERIMENT_PATH)
+print(f"MLflow experiment_id={experiment_id}")
+
+# COMMAND ----------
+from retail_demand.experiments.run_gbm import load_features_master_pandas
+
+features_df = load_features_master_pandas(spark, GOLD_ROOT, sample_rows=SAMPLE_ROWS)
+print(f"features_master shape={features_df.shape}")
+print(features_df.dtypes.to_string())
+
+# COMMAND ----------
+import mlflow
+from retail_demand.experiments.run_gbm import run_cv_experiment
+from retail_demand.models.gbm import LightGBMForecaster
+
+cv_config = {"cv_folds": CV_FOLDS, "horizon_days": HORIZON, "min_train_days": MIN_TRAIN}
+mlflow_config = {"experiment_id": experiment_id}
+
+with mlflow.start_run(run_name="phase-7-lightgbm"):
+    mlflow.set_tag("phase", "7-gbm")
+    mlflow.set_tag("model", "lightgbm")
+    lightgbm_results = run_cv_experiment(
+        features_df,
+        LightGBMForecaster,
+        model_params={},
+        cv_config=cv_config,
+        mlflow_config=mlflow_config,
+    )
+
+display(lightgbm_results)
+
+# COMMAND ----------
+from retail_demand.models.gbm import XGBoostForecaster
+
+with mlflow.start_run(run_name="phase-7-xgboost"):
+    mlflow.set_tag("phase", "7-gbm")
+    mlflow.set_tag("model", "xgboost")
+    xgboost_results = run_cv_experiment(
+        features_df,
+        XGBoostForecaster,
+        model_params={},
+        cv_config=cv_config,
+        mlflow_config=mlflow_config,
+    )
+
+display(xgboost_results)
+
+# COMMAND ----------
+import numpy as np
+import pandas as pd
+from retail_demand.eval.compare import BASELINE_WAPE, bootstrap_significance
+
+all_results = pd.concat([lightgbm_results, xgboost_results], ignore_index=True)
+comparison = all_results.groupby("model")[["mae", "rmse", "wape", "smape", "bias"]].mean()
+comparison = comparison.reset_index().sort_values("wape")
+comparison["delta_wape_vs_moving_average"] = (BASELINE_WAPE - comparison["wape"]) / BASELINE_WAPE
+display(comparison)
+
+# Replace with saved validation arrays from the best fold if you want fold-level inference here.
+example = bootstrap_significance(
+    np.array([1.0, 2.0, 3.0]),
+    np.array([1.0, 2.0, 3.0]),
+    np.array([1.5, 2.5, 3.5]),
+    n_bootstrap=200,
+)
+print(f"Example LightGBM vs moving_average bootstrap output: {example}")
+
+# COMMAND ----------
+client = mlflow.tracking.MlflowClient()
+runs = mlflow.search_runs(
+    experiment_ids=[experiment_id],
+    filter_string="tags.phase = '7-gbm'",
+    order_by=["metrics.wape ASC"],
+    max_results=1,
+)
+if runs.empty:
+    print("No Phase 7 child runs found yet.")
+else:
+    best_run_id = runs.iloc[0]["run_id"]
+    artifacts = client.list_artifacts(best_run_id)
+    print(f"Best run: {best_run_id}")
+    print("Artifacts:")
+    for artifact in artifacts:
+        print(f"- {artifact.path}")
