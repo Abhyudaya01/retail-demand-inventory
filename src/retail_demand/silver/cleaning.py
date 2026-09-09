@@ -56,7 +56,9 @@ def _drop_duplicate_keys(df: DataFrame, table_name: str) -> tuple[DataFrame, int
 
 def _coerce_business_schema(df: DataFrame, table_name: str) -> DataFrame:
     schema = BUSINESS_SCHEMAS[table_name]
-    return df.sparkSession.createDataFrame(df.rdd, schema=schema)
+    return df.select(
+        *[F.col(field.name).cast(field.dataType).alias(field.name) for field in schema.fields]
+    )
 
 
 def _finalize(
