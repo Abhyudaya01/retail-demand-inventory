@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.spark-ivy/
 .coverage
 htmlcov/
 .venv/
@@ -34,4 +35,6 @@ dist/
 00_sync_s3_to_volume.py
 
 data/bronze/
+data/silver/
 01_bronze_ingest.py
+02_silver_build.py

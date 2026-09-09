@@ -4,6 +4,7 @@ N_STORES ?= 1
 N_SKUS ?= 10
 DAYS ?= 90
 S3_MODE ?= overwrite
+SPARK_IVY_DIR ?= $(CURDIR)/.spark-ivy
 
 .PHONY: install lint test generate-data
 
@@ -14,7 +15,8 @@ lint:
 	$(PYTHON) -m ruff check .
 
 test:
-	$(PYTHON) -m pytest
+	mkdir -p $(SPARK_IVY_DIR)
+	PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=$(SPARK_IVY_DIR) pyspark-shell" $(PYTHON) -m pytest
 
 generate-data:
 	$(PYTHON) -m retail_demand.data_generation.generator --target local --output-path $(OUTPUT_PATH) --n-stores $(N_STORES) --n-skus $(N_SKUS) --days $(DAYS)
@@ -30,6 +32,9 @@ generate-data-s3-small:
 verify-s3:
 	$(PYTHON) -m retail_demand.io.s3_writer verify
 
-.PHONY: bronze-local
+.PHONY: bronze-local silver-local
 bronze-local:
 	$(PYTHON) -m retail_demand.bronze.cli
+
+silver-local:
+	$(PYTHON) -m retail_demand.silver.cli

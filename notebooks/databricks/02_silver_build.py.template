@@ -1,0 +1,66 @@
+# Databricks notebook source
+# Databricks notebook - 02_silver_build
+#
+# **************************************************************************
+# *  WARNING                                                               *
+# *  OVERWRITE REPLACES ALL SILVER ROWS. APPEND REPLAYS ALL BRONZE ROWS.   *
+# *  NO AWS CREDENTIALS ARE REQUIRED IN THIS NOTEBOOK.                     *
+# *  BRONZE AND SILVER ARE READ AND WRITTEN BY DELTA PATH ON VOLUMES.      *
+# **************************************************************************
+# Review docs/silver_layer.md before running.
+# Import a copy named 02_silver_build.py as a Python notebook.
+
+# COMMAND ----------
+# MAGIC %pip install --no-deps git+https://github.com/Abhyudaya01/retail-demand-inventory.git
+# MAGIC %pip install boto3 s3fs holidays "pydantic>=2" pydantic-settings typer structlog python-dotenv
+
+# COMMAND ----------
+dbutils.library.restartPython()
+
+# COMMAND ----------
+# Configuration
+BRONZE_ROOT = "/Volumes/workspace/retail_demand/bronze"
+SILVER_SCHEMA = "workspace.retail_demand_silver"
+SILVER_ROOT = "/Volumes/workspace/retail_demand/silver"
+MODE = "overwrite"
+
+# COMMAND ----------
+# Create schema label for future catalog-backed promotion. Silver writes below use paths.
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {SILVER_SCHEMA}")
+
+# COMMAND ----------
+from retail_demand.silver.build import SilverBuilder
+
+results = SilverBuilder(spark, BRONZE_ROOT, SILVER_SCHEMA, SILVER_ROOT).build_all(mode=MODE)
+print(f"{'Table':<12} {'Rows In':>12} {'Rows Out':>12} {'Dupes':>8} {'Invalid':>8} {'Imputed':>8}")
+for table, stats in results.items():
+    print(
+        f"{table:<12} {stats['rows_in']:>12,} {stats['rows_out']:>12,} "
+        f"{stats['dupes_dropped']:>8,} {stats['invalid_dropped']:>8,} "
+        f"{stats['imputations_applied']:>8,}"
+    )
+
+# COMMAND ----------
+from retail_demand.silver.dq import SilverDQ
+
+checks = SilverDQ.run_all_checks(spark, SILVER_ROOT)
+rows = [
+    {
+        "check_name": check["check_name"],
+        "passed": check["passed"],
+        "details": str(check["details"]),
+        "timestamp": check["timestamp"],
+    }
+    for check in checks.values()
+]
+display(spark.createDataFrame(rows))
+failed = [name for name, check in checks.items() if not check["passed"]]
+if failed:
+    raise RuntimeError(f"Critical Silver DQ checks failed: {', '.join(failed)}")
+
+# COMMAND ----------
+for table in results:
+    location = f"{SILVER_ROOT}/{table}"
+    print(f"{table}: {location}")
+    display(spark.read.format("delta").load(location).limit(10))
+

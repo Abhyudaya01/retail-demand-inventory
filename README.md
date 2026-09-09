@@ -18,15 +18,23 @@ AWS setup instructions are in [docs/aws_setup.md](docs/aws_setup.md).
 
 ### Bronze Layer
 
-The Bronze layer (`workspace.retail_demand_bronze`) copies raw Parquet rows to external
-Delta tables and adds `_ingested_at`, `_source_path`, and `_ingest_run_id`. Raw reads use
-the Databricks Volume; Bronze writes require a configured Unity Catalog external storage
-location. Locally, `make bronze-local` reads `data/synthetic` and writes `data/bronze`.
+The Bronze layer copies raw Parquet rows to path-backed Delta tables and adds
+`_ingested_at`, `_source_path`, and `_ingest_run_id`. Databricks Free Edition reads raw data
+from `/Volumes/workspace/retail_demand/raw` and writes Bronze Delta files to
+`/Volumes/workspace/retail_demand/bronze`. Locally, `make bronze-local` reads
+`data/synthetic` and writes `data/bronze`.
 
 Explicit schemas preserve source values, with the approved exception that three Parquet
 nanosecond timestamp columns use lossless BIGINT epoch nanoseconds. See
-[Bronze setup and schema details](docs/bronze_layer.md). Local implementation is complete;
-Databricks execution remains to be verified after external storage is configured.
+[Bronze setup and schema details](docs/bronze_layer.md).
+
+### Silver Layer
+
+The Silver layer reads Bronze Delta paths, cleans known generator dirtiness, writes strict
+path-backed Delta tables, and emits a data-quality report for every run. It normalizes
+store IDs, drops duplicate sales natural keys, removes negative sales units, imputes missing
+weekly prices with last observation carried forward, and validates natural-key uniqueness
+plus referential integrity. See [Silver cleaning and DQ details](docs/silver_layer.md).
 
 ## Stack
 
@@ -69,7 +77,7 @@ storage plus small one-time PUT request costs.
 - [x] Phase 1: Project scaffold and synthetic data generator
 - [x] Phase 2: S3 raw landing zone and Databricks sync
 - [x] Phase 3: Databricks Bronze Delta ingestion (as-landed)
-- [ ] Phase 4: Silver cleaning, conformance, and enrichment
+- [x] Phase 4: Silver cleaning, conformance, and validation
 - [ ] Phase 5: Gold demand and inventory feature tables
 - [ ] Phase 6: LightGBM forecasting baseline
 - [ ] Phase 7: MLflow tracking and model evaluation
