@@ -11,10 +11,22 @@ messiness. That gives downstream phases useful material for data quality checks,
 transformations, model validation, and executive-friendly inventory reporting without exposing
 private retail data.
 
-## Architecture Diagram
+## Architecture
 
 The current architecture placeholder is in [docs/architecture.md](docs/architecture.md).
 AWS setup instructions are in [docs/aws_setup.md](docs/aws_setup.md).
+
+### Bronze Layer
+
+The Bronze layer (`workspace.retail_demand_bronze`) copies raw Parquet rows to external
+Delta tables and adds `_ingested_at`, `_source_path`, and `_ingest_run_id`. Raw reads use
+the Databricks Volume; Bronze writes require a configured Unity Catalog external storage
+location. Locally, `make bronze-local` reads `data/synthetic` and writes `data/bronze`.
+
+Explicit schemas preserve source values, with the approved exception that three Parquet
+nanosecond timestamp columns use lossless BIGINT epoch nanoseconds. See
+[Bronze setup and schema details](docs/bronze_layer.md). Local implementation is complete;
+Databricks execution remains to be verified after external storage is configured.
 
 ## Stack
 
@@ -55,13 +67,12 @@ storage plus small one-time PUT request costs.
 ## Phase Checklist
 
 - [x] Phase 1: Project scaffold and synthetic data generator
-- [x] Phase 2: S3 raw landing zone and manifest
-- [ ] Phase 3: AWS S3 landing-zone layout and ingestion contract
-- [ ] Phase 4: Databricks Bronze Delta ingestion
-- [ ] Phase 5: Silver cleaning, conformance, and enrichment
-- [ ] Phase 6: Gold demand and inventory feature tables
-- [ ] Phase 7: LightGBM forecasting baseline
-- [ ] Phase 8: MLflow tracking and model evaluation
+- [x] Phase 2: S3 raw landing zone and Databricks sync
+- [x] Phase 3: Databricks Bronze Delta ingestion (as-landed)
+- [ ] Phase 4: Silver cleaning, conformance, and enrichment
+- [ ] Phase 5: Gold demand and inventory feature tables
+- [ ] Phase 6: LightGBM forecasting baseline
+- [ ] Phase 7: MLflow tracking and model evaluation
 - [ ] Phase 9: Reorder-point and safety-stock decision logic
 - [ ] Phase 10: Power BI semantic model and dashboard
 - [ ] Phase 11: Portfolio polish, documentation, and deployment notes

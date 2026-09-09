@@ -1,0 +1,57 @@
+# Databricks notebook source
+# Databricks notebook — 01_bronze_ingest
+#
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  !!!  WARNING  !!!                                                        ║
+# ║  OVERWRITE REPLACES ALL ROWS. APPEND REPLAYS ALL RAW FILES.                 ║
+# ║  NO AWS CREDENTIALS ARE REQUIRED IN THIS NOTEBOOK.                         ║
+# ║  /Volumes DESTINATIONS CANNOT BE REGISTERED AS UNITY CATALOG TABLES.       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+# Review docs/bronze_layer.md storage prerequisites before running.
+# Import a copy named 01_bronze_ingest.py as a Python notebook.
+
+# ── Cell 1: install package from GitHub ───────────────────────────────────────
+# MAGIC %pip install git+https://github.com/Abhyudaya01/retail-demand-inventory.git
+
+# COMMAND ----------
+dbutils.library.restartPython()
+
+# COMMAND ----------
+# ── Cell 2: configuration ────────────────────────────────────────────────────
+SOURCE_ROOT = "/Volumes/workspace/retail_demand/raw"
+BRONZE_ROOT = "/Volumes/workspace/retail_demand/bronze"
+SCHEMA_NAME = "workspace.retail_demand_bronze"
+MODE = "overwrite"
+
+# COMMAND ----------
+# ── Cell 3: create schema ────────────────────────────────────────────────────
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA_NAME}")
+
+# COMMAND ----------
+# ── Cell 4: ingest ───────────────────────────────────────────────────────────
+from retail_demand.bronze.ingest import BronzeIngestor
+
+results = BronzeIngestor(spark, SOURCE_ROOT, BRONZE_ROOT, SCHEMA_NAME).ingest_all(mode=MODE)
+print(f"{'Table':<12} {'Rows':>12} {'Files':>8} {'Seconds':>10}")
+for table, stats in results.items():
+    print(
+        f"{table:<12} {stats['rows_written']:>12,} "
+        f"{stats['source_files']:>8} {stats['duration_seconds']:>10.2f}"
+    )
+
+# COMMAND ----------
+# ── Cell 5: smoke validation ─────────────────────────────────────────────────
+from retail_demand.bronze.validation import validate_bronze_table
+
+print(f"{'Table':<12} {'Check':<6} {'Rows':>12}")
+for table, stats in results.items():
+    validation = validate_bronze_table(spark, stats["bronze_location"])
+    status = "PASS" if validation["checks_passed"] else "FAIL"
+    print(f"{table:<12} {status:<6} {validation['rows']:>12,}")
+
+# COMMAND ----------
+# ── Cell 6: inspect registered tables ────────────────────────────────────────
+display(spark.sql(f"SHOW TABLES IN {SCHEMA_NAME}"))
+for table in results:
+    print(table)
+    display(spark.sql(f"SELECT * FROM {SCHEMA_NAME}.{table} LIMIT 10"))

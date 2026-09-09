@@ -29,3 +29,7 @@ generate-data-s3-small:
 
 verify-s3:
 	$(PYTHON) -m retail_demand.io.s3_writer verify
+
+.PHONY: bronze-local
+bronze-local:
+	$(PYTHON) -m retail_demand.bronze.cli
