@@ -22,7 +22,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for end-to-end Silver tests."""
     session = get_spark_session(app_name="test-silver-build")
     yield session
-    session.stop()
 
 
 def test_silver_build_end_to_end_from_bronze_paths(

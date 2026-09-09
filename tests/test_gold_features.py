@@ -20,7 +20,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for Gold feature tests."""
     session = get_spark_session(app_name="test-gold-features")
     yield session
-    session.stop()
 
 
 def _ns(day: date) -> int:

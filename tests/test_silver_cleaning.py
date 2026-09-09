@@ -19,7 +19,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for Silver cleaning tests."""
     session = get_spark_session(app_name="test-silver-cleaning")
     yield session
-    session.stop()
 
 
 def test_clean_sales_normalizes_dedupes_and_drops_negative(spark: SparkSession) -> None:

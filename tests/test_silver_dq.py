@@ -17,7 +17,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for Silver DQ tests."""
     session = get_spark_session(app_name="test-silver-dq")
     yield session
-    session.stop()
 
 
 def test_basic_dq_checks_pass_and_fail(spark: SparkSession) -> None:

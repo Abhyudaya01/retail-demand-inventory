@@ -22,7 +22,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for Gold SQL tests."""
     session = get_spark_session(app_name="test-gold-sql")
     yield session
-    session.stop()
 
 
 @pytest.fixture(scope="module")

@@ -130,7 +130,6 @@ def spark() -> Generator[SparkSession, None, None]:
     """Provide a Spark session for Gold leakage tests."""
     session = get_spark_session(app_name="test-gold-leakage")
     yield session
-    session.stop()
 
 
 def test_leakage_audit_passes_clean_features_and_catches_corruption(

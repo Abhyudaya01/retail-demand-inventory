@@ -108,7 +108,6 @@ def spark() -> Generator[SparkSession, None, None]:
         del os.environ["DATABRICKS_RUNTIME_VERSION"]
     session = get_spark_session(app_name="test-bronze-ingest")
     yield session
-    session.stop()
 
 
 @pytest.fixture(scope="module")
