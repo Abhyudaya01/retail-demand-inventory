@@ -98,7 +98,7 @@ def audit_features_master(
     master = spark.read.format("delta").load(f"{root}/features_master")
     stg = spark.read.format("delta").load(f"{root}/stg_sales_daily")
     price = spark.read.format("delta").load(f"{root}/features_price")
-    sample = _sample_master(master, sample_size).cache()
+    sample = _sample_master(master, sample_size)
     results: dict[str, dict[str, Any]] = {}
 
     expected_lags = _expected_lags(stg)
@@ -130,7 +130,6 @@ def audit_features_master(
     )
 
     failed = [name for name, result in results.items() if not result["passes"]]
-    sample.unpersist()
     if failed:
         raise ValueError(f"Gold leakage audit failed: {', '.join(failed)}")
     return results
