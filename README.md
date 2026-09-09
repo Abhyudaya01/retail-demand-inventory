@@ -36,6 +36,13 @@ store IDs, drops duplicate sales natural keys, removes negative sales units, imp
 weekly prices with last observation carried forward, and validates natural-key uniqueness
 plus referential integrity. See [Silver cleaning and DQ details](docs/silver_layer.md).
 
+### Gold Layer
+
+The Gold layer reads Silver Delta paths and builds SQL-defined forecasting feature tables
+under `data/gold` locally or `/Volumes/workspace/retail_demand/gold` on Databricks. Features
+include lagged demand, rolling demand windows, price and promo context, calendar encodings,
+and prior-year seasonal anchors. See [Gold feature dictionary](docs/gold_layer.md).
+
 ## Stack
 
 - AWS S3 for raw object storage
@@ -78,7 +85,7 @@ storage plus small one-time PUT request costs.
 - [x] Phase 2: S3 raw landing zone and Databricks sync
 - [x] Phase 3: Databricks Bronze Delta ingestion (as-landed)
 - [x] Phase 4: Silver cleaning, conformance, and validation
-- [ ] Phase 5: Gold demand and inventory feature tables
+- [x] Phase 5: Gold demand and inventory feature tables
 - [ ] Phase 6: LightGBM forecasting baseline
 - [ ] Phase 7: MLflow tracking and model evaluation
 - [ ] Phase 9: Reorder-point and safety-stock decision logic

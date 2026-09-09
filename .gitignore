@@ -36,6 +36,8 @@ dist/
 
 data/bronze/
 data/silver/
+data/gold/
 01_bronze_ingest.py
 02_silver_build.py
+03_gold_build.py
 02_silver_build.py
