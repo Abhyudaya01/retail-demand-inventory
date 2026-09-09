@@ -8,7 +8,7 @@ S3_MODE ?= overwrite
 .PHONY: install lint test generate-data
 
 install:
-	$(PYTHON) -m pip install -e .
+	$(PYTHON) -m pip install -e ".[local-spark]"
 
 lint:
 	$(PYTHON) -m ruff check .

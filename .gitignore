@@ -34,3 +34,4 @@ dist/
 00_sync_s3_to_volume.py
 
 data/bronze/
+01_bronze_ingest.py

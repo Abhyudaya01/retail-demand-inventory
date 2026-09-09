@@ -58,17 +58,21 @@ row count, distinct run count, ISO timestamp bounds and checks_passed. It never 
 Use an activated Python environment and Java 11 or 17. The first local Spark session may
 need Maven access to download Delta JARs. The session uses local[2] and small shuffle counts;
 extra_conf can override local configuration. Databricks uses its existing session unchanged.
+On Databricks, `pyspark` and `delta-spark` are provided by the runtime and must not be
+installed by this package. Locally, install the Spark dependencies through the
+`local-spark` optional dependency group.
 
 ```bash
 source .venv/bin/activate
-make install
+pip install -e ".[local-spark]"
 make generate-data OUTPUT_PATH=data/synthetic N_STORES=2 N_SKUS=20 DAYS=60
 make bronze-local
 make lint
 make test
 ```
 
-bronze-local runs the actual pipeline, reading `data/synthetic` and writing `data/bronze`.
+The `make install` target runs the same local editable install command. bronze-local runs
+the actual pipeline, reading `data/synthetic` and writing `data/bronze`.
 For other directories or append:
 
 ```bash
@@ -96,6 +100,9 @@ Bronze supports two storage modes:
 
 The ingestor rejects only unconfigured placeholders such as `REPLACE_WITH...`; Volume
 destinations are valid. See [Volume path rules](https://docs.databricks.com/aws/en/volumes/paths).
+The notebook `%pip install` command installs only the retail-demand package dependencies;
+it relies on Databricks serverless to provide compatible `pyspark` and Delta runtime
+support.
 
 1. Review and push the changes yourself. The notebook installs the GitHub version, so
    an unpushed local implementation is not available to it.

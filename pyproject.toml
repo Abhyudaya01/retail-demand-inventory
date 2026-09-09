@@ -22,13 +22,15 @@ dependencies = [
   "structlog==24.4.0",
   "pytest==8.3.4",
   "ruff==0.8.1",
-  "pyspark>=3.5,<4.0",
-  "delta-spark>=3.2,<4.0",
 ]
 
 [project.optional-dependencies]
 dev = [
   "moto[s3]==5.0.22",
+]
+local-spark = [
+  "pyspark>=3.5,<5.0",
+  "delta-spark>=3.2,<5.0",
 ]
 
 [project.scripts]
