@@ -330,7 +330,7 @@ def generate_prices(
     missing_count = min(row_count - 1, _rate_count(row_count, config.missing_price_rate))
     if missing_count > 0:
         missing_indices = rng.choice(prices.index.to_numpy(), size=missing_count, replace=False)
-        prices = prices.drop(index=missing_indices)
+        prices.loc[missing_indices, "price"] = np.nan
 
     if len(prices) > 0 and not prices["is_promo"].any():
         first_index = prices.index[0]
@@ -682,14 +682,7 @@ def _estimated_plan(
         "stores": config.num_stores,
         "products": config.num_skus,
         "calendar": config.num_days,
-        "prices": int(
-            round(
-                config.num_stores
-                * config.num_skus
-                * week_count
-                * (1 - config.missing_price_rate)
-            )
-        ),
+        "prices": config.num_stores * config.num_skus * week_count,
         "sales": config.expected_sales_rows
         + _rate_count(config.expected_sales_rows, config.duplicate_sales_rate),
     }

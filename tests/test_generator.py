@@ -39,7 +39,7 @@ def test_small_sample_row_counts_and_schemas() -> None:
 
     week_count = _week_count(dataset.calendar)
     expected_price_rows = config.num_stores * config.num_skus * week_count
-    assert len(dataset.prices) < expected_price_rows
+    assert len(dataset.prices) == expected_price_rows
 
     expected_duplicates = max(
         1,
@@ -52,22 +52,28 @@ def test_required_columns_have_no_nans() -> None:
     """Inputs: generated sample; outputs: assertions; side effects: none."""
     dataset = generate_dataset(_small_dataset_config())
 
-    tables = [
-        dataset.stores,
-        dataset.products,
-        dataset.calendar,
-        dataset.prices,
-        dataset.sales,
-    ]
-    columns = [
-        STORE_COLUMNS,
-        PRODUCT_COLUMNS,
-        CALENDAR_COLUMNS,
-        PRICE_COLUMNS,
-        SALES_COLUMNS,
-    ]
+    tables = [dataset.stores, dataset.products, dataset.calendar, dataset.sales]
+    columns = [STORE_COLUMNS, PRODUCT_COLUMNS, CALENDAR_COLUMNS, SALES_COLUMNS]
     for table, required_columns in zip(tables, columns, strict=True):
         assert not table[required_columns].isna().any().any()
+
+    price_required_except_price = [column for column in PRICE_COLUMNS if column != "price"]
+    assert not dataset.prices[price_required_except_price].isna().any().any()
+
+
+def test_missing_prices_rate() -> None:
+    """Inputs: generated prices; outputs: null-price rate assertion; side effects: none."""
+    config = SyntheticDataConfig(
+        num_stores=5,
+        num_skus=200,
+        num_days=90,
+        end_date=date(2026, 1, 31),
+    )
+    dataset = generate_dataset(config)
+
+    missing_rate = float(dataset.prices["price"].isna().mean())
+
+    assert 0.001 <= missing_rate <= 0.010
 
 
 def test_promo_lift_is_visible_in_aggregate() -> None:
