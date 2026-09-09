@@ -75,12 +75,13 @@ class _DummyModel:
 
 def _features() -> pd.DataFrame:
     dates = pd.date_range("2026-01-01", periods=40, freq="D")
+    labels = 20.0 + np.sin(np.arange(40, dtype=float)) * 5.0
     return pd.DataFrame(
         {
             "store_id": pd.Series(["store_0001"] * 40, dtype="category"),
             "sku_id": pd.Series(["sku_00001"] * 40, dtype="category"),
             "date": dates,
-            "label_units_sold": np.arange(40, dtype=float) + 1.0,
+            "label_units_sold": labels,
             "lag_1_units": np.arange(40, dtype=float),
             "store_type": pd.Series(["A"] * 40, dtype="category"),
         }

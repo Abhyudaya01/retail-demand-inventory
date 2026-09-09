@@ -29,7 +29,7 @@ CATEGORICAL_COLUMNS = [
     "state",
     "store_type",
 ]
-EXCLUDE_COLUMNS = {"label_units_sold", "date", "_gold_run_id", "year", "month"}
+EXCLUDE_COLUMNS = {"label_units_sold", "date", "_gold_run_id", "year", "month", "revenue"}
 
 
 def _spark_to_pandas_arrow(df: Any) -> pd.DataFrame:
@@ -65,10 +65,32 @@ def load_features_master_pandas(
 
 
 def get_feature_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
-    """Return model feature columns and the categorical subset."""
+    """Return model feature columns and the categorical subset.
+
+    Exclude revenue because revenue = units_sold × current_price at the same date, so
+    including it would leak the label.
+    """
     feature_cols = [col for col in df.columns if col not in EXCLUDE_COLUMNS]
     categorical_cols = [col for col in CATEGORICAL_COLUMNS if col in feature_cols]
     return feature_cols, categorical_cols
+
+
+def sanity_check_no_target_leakage(
+    features_df: pd.DataFrame, feature_cols: list[str], label_col: str = "label_units_sold"
+) -> None:
+    """Compute feature-label correlation and raise when one feature indicates target leakage."""
+    numeric_dtypes = {"float64", "int64", "int32", "float32"}
+    for col in feature_cols:
+        if str(features_df[col].dtype) in numeric_dtypes:
+            valid = features_df[[col, label_col]].dropna()
+            if valid[col].nunique() < 2 or valid[label_col].nunique() < 2:
+                continue
+            corr = valid[col].corr(valid[label_col])
+            if pd.notna(corr) and abs(corr) > 0.95:
+                raise ValueError(
+                    f"Feature '{col}' has correlation {corr:.3f} with label. "
+                    "This indicates target leakage. Exclude this feature or investigate."
+                )
 
 
 def assert_no_fold_leakage(
@@ -205,6 +227,7 @@ def run_cv_experiment(
     import mlflow
 
     feature_cols, categorical_cols = get_feature_columns(features_df)
+    sanity_check_no_target_leakage(features_df, feature_cols)
     folds = walk_forward_splits(
         features_df["date"],
         n_folds=int(cv_config.get("cv_folds", 3)),

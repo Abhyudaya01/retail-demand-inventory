@@ -15,7 +15,12 @@ from pyspark.sql import SparkSession
 from retail_demand.bronze.ingest import BronzeIngestor
 from retail_demand.config import Settings
 from retail_demand.data_generation.generator import SyntheticDataConfig, write_dataset
-from retail_demand.experiments.run_gbm import load_features_master_pandas, run_cv_experiment
+from retail_demand.experiments.run_gbm import (
+    get_feature_columns,
+    load_features_master_pandas,
+    run_cv_experiment,
+    sanity_check_no_target_leakage,
+)
 from retail_demand.gold.build import GoldBuilder, default_sql_dir
 from retail_demand.models.gbm import LightGBMForecaster
 from retail_demand.silver.build import SilverBuilder
@@ -52,6 +57,46 @@ def test_load_features_master_casts_object_booleans() -> None:
     assert pd.api.types.is_datetime64_any_dtype(features["date"])
     print("\nfeatures_master sample dtypes:")
     print(features[bool_columns].dtypes.to_string())
+
+
+def test_get_feature_columns_excludes_revenue_target_leakage() -> None:
+    features = pd.DataFrame(
+        {
+            "date": pd.date_range("2026-01-01", periods=2),
+            "label_units_sold": [2.0, 3.0],
+            "revenue": [20.0, 30.0],
+            "current_price": [10.0, 10.0],
+            "lag_1_units": [1.0, 2.0],
+            "rolling_mean_7": [1.5, 2.0],
+            "same_day_last_year_units": [2.0, 3.0],
+            "store_id": pd.Series(["s1", "s2"], dtype="category"),
+        }
+    )
+
+    feature_cols, categorical_cols = get_feature_columns(features)
+
+    assert "revenue" not in feature_cols
+    assert "current_price" in feature_cols
+    assert "lag_1_units" in feature_cols
+    assert "rolling_mean_7" in feature_cols
+    assert "same_day_last_year_units" in feature_cols
+    assert categorical_cols == ["store_id"]
+
+
+def test_sanity_check_no_target_leakage_raises_on_direct_label_function_and_passes_clean() -> None:
+    features = pd.DataFrame(
+        {
+            "label_units_sold": [1.0, 2.0, 3.0, 4.0],
+            "leaky_feature": [2.0, 4.0, 6.0, 8.0],
+            "clean_feature": [4.0, 1.0, 3.0, 2.0],
+            "category": pd.Series(["a", "b", "a", "b"], dtype="category"),
+        }
+    )
+
+    with pytest.raises(ValueError, match="leaky_feature.*target leakage"):
+        sanity_check_no_target_leakage(features, ["leaky_feature", "clean_feature"])
+
+    sanity_check_no_target_leakage(features, ["clean_feature", "category"])
 
 
 class _NoopRun:

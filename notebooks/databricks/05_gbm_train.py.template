@@ -11,7 +11,7 @@
 
 # COMMAND ----------
 # MAGIC %pip install --no-deps --force-reinstall git+https://github.com/Abhyudaya01/retail-demand-inventory.git
-# MAGIC %pip install boto3 s3fs holidays "pydantic>=2" pydantic-settings typer structlog python-dotenv
+# MAGIC %pip install boto3 s3fs holidays "pydantic>=2" pydantic-settings typer structlog python-dotenv lightgbm xgboost shap
 
 # COMMAND ----------
 dbutils.library.restartPython()
