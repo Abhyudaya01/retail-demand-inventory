@@ -19,6 +19,7 @@ from retail_demand.spark.session import get_spark_session
 
 DEFAULT_EXPERIMENT_PATH = "/Users/alohani@umd.edu/retail-demand-forecasting"
 BASELINE_WAPE = 0.650
+BOOL_COLUMNS = ["is_on_promo", "is_weekend", "is_us_holiday"]
 CATEGORICAL_COLUMNS = [
     "store_id",
     "sku_id",
@@ -49,9 +50,17 @@ def load_features_master_pandas(
         frame = frame.orderBy(F.xxhash64(*[F.col(col) for col in order_cols])).limit(sample_rows)
     result = _spark_to_pandas_arrow(frame)
     result["date"] = pd.to_datetime(result["date"], unit="ns")
+    for col in BOOL_COLUMNS:
+        if col in result.columns:
+            result[col] = result[col].astype("bool")
     for col in CATEGORICAL_COLUMNS:
         if col in result.columns:
             result[col] = result[col].astype("category")
+    object_features = [
+        col for col in result.columns
+        if col not in EXCLUDE_COLUMNS and result[col].dtype == "object"
+    ]
+    assert not object_features, f"Object dtype model features: {object_features}"
     return result
 
 

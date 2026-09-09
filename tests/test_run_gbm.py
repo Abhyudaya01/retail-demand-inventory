@@ -21,6 +21,39 @@ from retail_demand.models.gbm import LightGBMForecaster
 from retail_demand.silver.build import SilverBuilder
 
 
+def test_load_features_master_casts_object_booleans() -> None:
+    """Reproduce Databricks Arrow output with Python bools in object columns."""
+    bool_columns = ["is_on_promo", "is_weekend", "is_us_holiday"]
+    category_columns = [
+        "store_id", "sku_id", "category", "subcategory", "region", "state", "store_type"
+    ]
+    sample = pd.DataFrame({
+        "date": [date(2026, 1, 1), date(2026, 1, 2)],
+        "label_units_sold": [2.0, 3.0],
+        "_gold_run_id": ["tiny-fixture", "tiny-fixture"],
+        **{col: pd.Series([True, False], dtype=object) for col in bool_columns},
+        **{col: ["a", "b"] for col in category_columns},
+    })
+    frame = SimpleNamespace(
+        toArrow=lambda: SimpleNamespace(to_pandas=lambda: sample.copy())
+    )
+    spark = SimpleNamespace(read=SimpleNamespace(
+        format=lambda _format: SimpleNamespace(load=lambda _path: frame)
+    ))
+
+    features = load_features_master_pandas(spark, "/tiny/gold")
+
+    for col in bool_columns:
+        assert sample[col].dtype == object
+        assert features[col].dtype == bool
+        assert features[col].tolist() == [True, False]
+    for col in category_columns:
+        assert isinstance(features[col].dtype, pd.CategoricalDtype)
+    assert pd.api.types.is_datetime64_any_dtype(features["date"])
+    print("\nfeatures_master sample dtypes:")
+    print(features[bool_columns].dtypes.to_string())
+
+
 class _NoopRun:
     def __enter__(self) -> _NoopRun:
         return self
