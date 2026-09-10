@@ -68,6 +68,21 @@ Generated deliverables:
 - [Best SKUs table](reports/tables/best_skus.csv)
 - [Worst SKUs table](reports/tables/worst_skus.csv)
 
+### Business Impact
+
+Phase 9 turns Phase 7 point forecasts into reorder decisions and compares baseline policies
+against ML-driven 95% and 99% service-level policies. Real cost deltas should be filled from
+[the inventory decision notebook](notebooks/analysis/07_inventory_decision.ipynb) after running
+`make inventory-local`.
+
+Generated deliverables:
+
+- [Inventory cost comparison](reports/tables/inventory_cost_comparison.csv)
+- [Inventory per-SKU backtest](reports/tables/inventory_per_sku.csv)
+- [Inventory category delta](reports/tables/inventory_category_delta.csv)
+- [Inventory cost comparison chart](reports/figures/inventory_cost_comparison.png)
+- [Inventory service sensitivity chart](reports/figures/inventory_service_sensitivity.png)
+
 ### Baseline Results
 
 Phase 6 compares three simple baselines using walk-forward validation and MLflow tracking.
@@ -126,7 +141,7 @@ storage plus small one-time PUT request costs.
 - [x] Phase 6: Baseline forecasting and MLflow tracking
 - [x] Phase 7: LightGBM/XGBoost tracking and model evaluation
 - [x] Phase 8: Segment-level error analysis and interpretation
-- [ ] Phase 9: Reorder-point and safety-stock decision logic
+- [x] Phase 9: Reorder-point and safety-stock decision logic
 - [ ] Phase 10: Power BI semantic model and dashboard
 - [ ] Phase 11: Portfolio polish, documentation, and deployment notes
 

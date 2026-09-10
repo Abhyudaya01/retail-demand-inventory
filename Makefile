@@ -8,9 +8,12 @@ SPARK_IVY_DIR ?= $(CURDIR)/.spark-ivy
 PYTEST_ARGS ?=
 ERROR_ANALYSIS_FIXTURE_DIR ?= tests/fixtures/error_analysis
 ERROR_ANALYSIS_KERNEL_DIR ?= reports/.jupyter/kernels/phase8
-ERROR_ANALYSIS_PYTHON ?= $(shell python -c "import sys; print(sys.executable)")
+ERROR_ANALYSIS_PYTHON ?= $(shell $(PYTHON) -c "import sys; print(sys.executable)")
+INVENTORY_FIXTURE_DIR ?= tests/fixtures/error_analysis
+INVENTORY_KERNEL_DIR ?= reports/.jupyter/kernels/phase9
+INVENTORY_PYTHON ?= $(shell $(PYTHON) -c "import sys; print(sys.executable)")
 
-.PHONY: install lint test generate-data error-analysis-local
+.PHONY: install lint test generate-data error-analysis-local inventory-local
 
 install:
 	$(PYTHON) -m pip install -e ".[local-spark]"
@@ -41,6 +44,27 @@ error-analysis-local:
 	$(PYTHON) -m jupyter nbconvert --to notebook --execute notebooks/analysis/06_error_analysis.ipynb \
 		--ExecutePreprocessor.kernel_name=phase8 \
 		--output 06_error_analysis.executed.ipynb \
+		--output-dir reports
+
+inventory-local:
+	mkdir -p reports/figures reports/tables
+	rm -f reports/tables/inventory_*.csv reports/figures/inventory_*.png
+	mkdir -p $(INVENTORY_KERNEL_DIR)
+	printf '%s\n' \
+		'{' \
+		'  "argv": ["$(INVENTORY_PYTHON)", "-m", "ipykernel_launcher", "-f", "{connection_file}"],' \
+		'  "display_name": "Phase 9 Inventory Decision", "language": "python"' \
+		'}' > $(INVENTORY_KERNEL_DIR)/kernel.json
+	INVENTORY_PREDICTIONS_CSV=$(abspath $(INVENTORY_FIXTURE_DIR)/forecast_vs_actual.csv) \
+	INVENTORY_SALES_CSV=$(abspath $(INVENTORY_FIXTURE_DIR)/sales_history.csv) \
+	INVENTORY_PRICES_CSV=$(abspath $(INVENTORY_FIXTURE_DIR)/prices.csv) \
+	INVENTORY_PRODUCTS_CSV=$(abspath $(INVENTORY_FIXTURE_DIR)/products.csv) \
+	INVENTORY_FIGURE_DIR=$(abspath reports/figures) \
+	INVENTORY_TABLE_DIR=$(abspath reports/tables) \
+	JUPYTER_PATH=$(CURDIR)/reports/.jupyter \
+	$(PYTHON) -m jupyter nbconvert --to notebook --execute notebooks/analysis/07_inventory_decision.ipynb \
+		--ExecutePreprocessor.kernel_name=phase9 \
+		--output 07_inventory_decision.executed.ipynb \
 		--output-dir reports
 
 generate-data:
