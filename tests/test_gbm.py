@@ -110,23 +110,19 @@ def _panel() -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
     return train[features], train["label_units_sold"], val[features], val["label_units_sold"]
 
 
-def test_xgb_wape_eval_accepts_dmatrix_or_label_array() -> None:
-    """XGBoost 1.x passes DMatrix-like data; 2.1+ may pass the label array directly."""
+def test_xgboost_custom_eval() -> None:
+    """XGBoost sklearn eval metrics return a float value, not a named tuple."""
+    perfect = _xgb_wape_eval(
+        y_true=np.array([10, 10, 10]), y_pred=np.array([10, 10, 10])
+    )
+    complete_miss = _xgb_wape_eval(
+        y_true=np.array([10, 10, 10]), y_pred=np.array([0, 0, 0])
+    )
 
-    class Labels:
-        def get_label(self) -> np.ndarray:
-            return np.array([2.0, 4.0, 8.0])
-
-    preds = np.array([1.0, 5.0, 7.0])
-
-    dmatrix_result = _xgb_wape_eval(preds, Labels())
-    array_result = _xgb_wape_eval(preds, np.array([2.0, 4.0, 8.0]))
-
-    assert dmatrix_result[0] == "wape"
-    assert array_result[0] == "wape"
-    assert isinstance(dmatrix_result[1], float)
-    assert isinstance(array_result[1], float)
-    assert dmatrix_result == array_result
+    assert perfect == 0.0
+    assert complete_miss == 1.0
+    assert isinstance(perfect, float)
+    assert isinstance(complete_miss, float)
 
 
 def test_lightgbm_trains_and_predicts_tiny_panel(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -45,12 +45,12 @@ def _lgb_wape(y_pred: np.ndarray, dataset: Any) -> tuple[str, float, bool]:
     return "wape", _wape_np(dataset.get_label(), y_pred), False
 
 
-def _xgb_wape_eval(preds: np.ndarray, dmatrix_or_labels: Any) -> tuple[str, float]:
-    if hasattr(dmatrix_or_labels, "get_label"):
-        y_true = dmatrix_or_labels.get_label()
-    else:
-        y_true = np.asarray(dmatrix_or_labels)
-    return "wape", _wape_np(y_true, preds)
+def _xgb_wape_eval(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """XGBoost sklearn-API eval callback: (y_true, y_pred) -> float WAPE."""
+    y_true = np.asarray(y_true, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+    epsilon = 1e-10
+    return float(np.sum(np.abs(y_true - y_pred)) / max(np.sum(np.abs(y_true)), epsilon))
 
 
 class LightGBMForecaster:
