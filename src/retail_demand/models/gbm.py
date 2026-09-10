@@ -45,8 +45,12 @@ def _lgb_wape(y_pred: np.ndarray, dataset: Any) -> tuple[str, float, bool]:
     return "wape", _wape_np(dataset.get_label(), y_pred), False
 
 
-def _xgb_wape(y_pred: np.ndarray, data: Any) -> tuple[str, float]:
-    return "wape", _wape_np(data.get_label(), y_pred)
+def _xgb_wape_eval(preds: np.ndarray, dmatrix_or_labels: Any) -> tuple[str, float]:
+    if hasattr(dmatrix_or_labels, "get_label"):
+        y_true = dmatrix_or_labels.get_label()
+    else:
+        y_true = np.asarray(dmatrix_or_labels)
+    return "wape", _wape_np(y_true, preds)
 
 
 class LightGBMForecaster:
@@ -150,7 +154,7 @@ class XGBoostForecaster:
 
         self.feature_names_ = list(X_train.columns)
         params = {**self.params, "early_stopping_rounds": self.early_stopping_rounds}
-        self.model_ = xgb.XGBRegressor(**params, eval_metric=_xgb_wape)
+        self.model_ = xgb.XGBRegressor(**params, eval_metric=_xgb_wape_eval)
         self.model_.fit(X_train, y_train, eval_set=[(X_val, y_val)])
         return self
 

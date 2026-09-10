@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from pandas.api import types as pd_types
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -67,8 +68,8 @@ def load_features_master_pandas(
 def get_feature_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     """Return model feature columns and the categorical subset.
 
-    Exclude revenue because revenue = units_sold × current_price at the same date, so
-    including it would leak the label.
+    Exclude revenue because revenue = units_sold × current_price at the same date;
+    including it leaks the label.
     """
     feature_cols = [col for col in df.columns if col not in EXCLUDE_COLUMNS]
     categorical_cols = [col for col in CATEGORICAL_COLUMNS if col in feature_cols]
@@ -78,10 +79,14 @@ def get_feature_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
 def sanity_check_no_target_leakage(
     features_df: pd.DataFrame, feature_cols: list[str], label_col: str = "label_units_sold"
 ) -> None:
-    """Compute feature-label correlation and raise when one feature indicates target leakage."""
-    numeric_dtypes = {"float64", "int64", "int32", "float32"}
+    """Compute correlation between numeric features and the label.
+
+    Warn if any single feature has |corr| > 0.95, which indicates target leakage.
+    """
     for col in feature_cols:
-        if str(features_df[col].dtype) in numeric_dtypes:
+        if pd_types.is_float_dtype(features_df[col]) or pd_types.is_integer_dtype(
+            features_df[col]
+        ):
             valid = features_df[[col, label_col]].dropna()
             if valid[col].nunique() < 2 or valid[label_col].nunique() < 2:
                 continue

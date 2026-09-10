@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from retail_demand.models.gbm import LightGBMForecaster, XGBoostForecaster
+from retail_demand.models.gbm import LightGBMForecaster, XGBoostForecaster, _xgb_wape_eval
 
 
 def _install_fake_lightgbm(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,6 +108,25 @@ def _panel() -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
     val = frame[frame["date_idx"] >= 45]
     features = ["store_id", "sku_id", "date_idx", "lag_1_units", "rolling_mean_28", "is_weekend"]
     return train[features], train["label_units_sold"], val[features], val["label_units_sold"]
+
+
+def test_xgb_wape_eval_accepts_dmatrix_or_label_array() -> None:
+    """XGBoost 1.x passes DMatrix-like data; 2.1+ may pass the label array directly."""
+
+    class Labels:
+        def get_label(self) -> np.ndarray:
+            return np.array([2.0, 4.0, 8.0])
+
+    preds = np.array([1.0, 5.0, 7.0])
+
+    dmatrix_result = _xgb_wape_eval(preds, Labels())
+    array_result = _xgb_wape_eval(preds, np.array([2.0, 4.0, 8.0]))
+
+    assert dmatrix_result[0] == "wape"
+    assert array_result[0] == "wape"
+    assert isinstance(dmatrix_result[1], float)
+    assert isinstance(array_result[1], float)
+    assert dmatrix_result == array_result
 
 
 def test_lightgbm_trains_and_predicts_tiny_panel(monkeypatch: pytest.MonkeyPatch) -> None:

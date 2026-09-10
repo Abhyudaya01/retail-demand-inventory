@@ -83,20 +83,30 @@ def test_get_feature_columns_excludes_revenue_target_leakage() -> None:
     assert categorical_cols == ["store_id"]
 
 
-def test_sanity_check_no_target_leakage_raises_on_direct_label_function_and_passes_clean() -> None:
+def test_sanity_check_no_target_leakage_raises_on_direct_label_function() -> None:
     features = pd.DataFrame(
         {
             "label_units_sold": [1.0, 2.0, 3.0, 4.0],
             "leaky_feature": [2.0, 4.0, 6.0, 8.0],
             "clean_feature": [4.0, 1.0, 3.0, 2.0],
-            "category": pd.Series(["a", "b", "a", "b"], dtype="category"),
         }
     )
 
     with pytest.raises(ValueError, match="leaky_feature.*target leakage"):
         sanity_check_no_target_leakage(features, ["leaky_feature", "clean_feature"])
 
-    sanity_check_no_target_leakage(features, ["clean_feature", "category"])
+
+def test_sanity_check_no_target_leakage_passes_on_clean_features() -> None:
+    features = pd.DataFrame(
+        {
+            "label_units_sold": [1.0, 2.0, 3.0, 4.0],
+            "clean_feature": [4.0, 1.0, 3.0, 2.0],
+            "category": pd.Series(["a", "b", "a", "b"], dtype="category"),
+            "date": pd.date_range("2026-01-01", periods=4),
+        }
+    )
+
+    sanity_check_no_target_leakage(features, ["clean_feature", "category", "date"])
 
 
 class _NoopRun:
