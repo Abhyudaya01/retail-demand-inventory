@@ -53,6 +53,21 @@ Phase 7 trains LightGBM and XGBoost against the Phase 6 moving-average WAPE bar 
 | lightgbm | TBD | TBD | TBD | TBD | TBD | TBD |
 | xgboost | TBD | TBD | TBD | TBD | TBD | TBD |
 
+### Error Analysis
+
+Phase 8 adds segment-level interpretation for the best LightGBM run: volume tiers,
+intermittency classes, promo-day splits, bias flags, best/worst SKUs, and three saved plots.
+See [docs/error_analysis.md](docs/error_analysis.md) and
+[notebooks/analysis/06_error_analysis.ipynb](notebooks/analysis/06_error_analysis.ipynb).
+
+Generated deliverables:
+
+- [Store/category WAPE heatmap](reports/figures/store_category_wape_heatmap.png)
+- [Actual vs predicted scatter](reports/figures/actual_vs_predicted_scatter.png)
+- [Worst SKU time series](reports/figures/worst_sku_time_series.png)
+- [Best SKUs table](reports/tables/best_skus.csv)
+- [Worst SKUs table](reports/tables/worst_skus.csv)
+
 ### Baseline Results
 
 Phase 6 compares three simple baselines using walk-forward validation and MLflow tracking.
@@ -110,6 +125,7 @@ storage plus small one-time PUT request costs.
 - [x] Phase 5: Gold demand and inventory feature tables
 - [x] Phase 6: Baseline forecasting and MLflow tracking
 - [x] Phase 7: LightGBM/XGBoost tracking and model evaluation
+- [x] Phase 8: Segment-level error analysis and interpretation
 - [ ] Phase 9: Reorder-point and safety-stock decision logic
 - [ ] Phase 10: Power BI semantic model and dashboard
 - [ ] Phase 11: Portfolio polish, documentation, and deployment notes

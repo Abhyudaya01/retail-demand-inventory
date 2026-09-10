@@ -1,0 +1,6 @@
+store_id,region,state,store_type,open_date,sqft
+store_0001,Northeast,MA,B,2010-02-10,41915
+store_0002,Southwest,AZ,A,2017-11-11,55653
+store_0003,Southwest,TX,C,2010-09-20,28743
+store_0004,Midwest,MI,B,2015-06-07,45920
+store_0005,Midwest,WI,B,2017-03-01,42332
